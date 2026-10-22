@@ -56,6 +56,34 @@ def test_additive_optional_response_field_is_not_breaking() -> None:
     assert findings == []
 
 
+def test_optional_parameter_becoming_required_is_breaking() -> None:
+    before = {
+        "openapi": "3.1.0",
+        "paths": {
+            "/items": {
+                "get": {
+                    "parameters": [
+                        {
+                            "name": "limit",
+                            "in": "query",
+                            "required": False,
+                            "schema": {"type": "integer"},
+                        }
+                    ],
+                    "responses": {"200": {"description": "ok"}},
+                }
+            }
+        },
+    }
+    after = json.loads(json.dumps(before))
+    after["paths"]["/items"]["get"]["parameters"][0]["required"] = True
+
+    findings = compare_specs(before, after)
+
+    assert [item.code for item in findings] == ["parameter.required_added"]
+    assert findings[0].path == "GET /items"
+
+
 def test_local_refs_are_compared_and_recursive_refs_terminate() -> None:
     before = {
         "openapi": "3.1.0",
@@ -91,3 +119,4 @@ def test_local_refs_are_compared_and_recursive_refs_terminate() -> None:
     del after["components"]["schemas"]["Node"]["properties"]["id"]
     findings = compare_specs(before, after)
     assert any(item.path.endswith(".id") for item in findings)
+
