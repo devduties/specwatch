@@ -214,15 +214,18 @@ def compare_specs(old_document: dict[str, Any], new_document: dict[str, Any]) ->
 
         old_parameters = _parameters(old_path_item, old_op)
         new_parameters = _parameters(new_path_item, new_op)
-        for key in sorted(new_parameters.keys() - old_parameters.keys()):
+        for key in sorted(new_parameters):
             parameter = new_parameters[key]
-            if parameter.get("required") is True:
+            old_parameter = old_parameters.get(key)
+            if parameter.get("required") is True and (
+                old_parameter is None or old_parameter.get("required") is not True
+            ):
                 findings.append(
                     Finding(
                         "breaking",
                         "parameter.required_added",
                         operation_path,
-                        f"Required {key[0]} parameter '{key[1]}' was added.",
+                        f"Required {key[0]} parameter '{key[1]}' was added or became required.",
                     )
                 )
 
@@ -284,3 +287,4 @@ def compare_specs(old_document: dict[str, Any], new_document: dict[str, Any]) ->
             )
 
     return findings
+
