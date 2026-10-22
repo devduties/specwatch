@@ -1,0 +1,109 @@
+# SpecWatch
+
+**SpecWatch watches OpenAPI documents and explains potentially breaking contract changes.** Add a public HTTPS specification, capture snapshots over time, and review compatibility findings in a small dashboard or through the HTTP API.
+
+## What it does
+
+- Fetches OpenAPI 3.x documents in JSON or YAML over HTTPS.
+- Stores each changed or unchanged snapshot history in SQLite, using ETag and Last-Modified validators when available.
+- Detects common breaking changes: removed operations or response codes, newly required parameters or request fields, removed request fields, changed schema types, and removed enum values.
+- Reports response-field removals as breaking because clients can rely on fields present in the documented contract.
+- Polls monitored documents in the background and supports manual checks.
+- Serves an accessible, responsive dashboard and a documented REST API at `/docs`.
+- Rejects non-HTTPS URLs, credentials, redirects, non-public IPs, and oversized documents. An optional host allowlist can further restrict monitored sources.
+
+SpecWatch intentionally reports an explainable subset of compatibility changes. It is not a formal compatibility proof: external `$ref` documents and some advanced JSON Schema constructs are outside the current analyzer's scope. Review findings alongside your API's versioning and client policies.
+
+## Run locally
+
+Requires Python 3.11 or newer.
+
+```bash
+python -m venv .venv
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+# macOS/Linux: source .venv/bin/activate
+python -m pip install -e '.[dev]'
+uvicorn specwatch.main:app --app-dir src --reload
+```
+
+Open `http://127.0.0.1:8000` for the dashboard and `http://127.0.0.1:8000/docs` for the API reference. The application creates `./data/specwatch.sqlite3` on first start. Use `SPECWATCH_DATABASE_PATH` to choose a different location.
+
+### Docker
+
+```bash
+docker compose up --build
+```
+
+The compose file binds the app to localhost and persists its database in a named volume. The application has no authentication and is designed for local development; do not expose it publicly without adding authentication and network egress controls.
+
+## Offline compatibility demo
+
+The repository includes two small example contracts so the analyzer can be tried without a network call:
+
+```bash
+python -m specwatch examples/before.json examples/after.json
+```
+
+The command prints JSON findings and exits with code `1` when it detects a breaking change, which makes it usable in a shell workflow.
+
+## HTTP API
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/monitors \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Payments API","spec_url":"https://api.example.com/openapi.json"}'
+```
+
+The create call registers a monitor. The first check establishes its baseline; later checks compare the new document with the last stored snapshot.
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/health` | Process health |
+| `GET` | `/api/overview` | Counts for monitors, snapshots, findings, and current errors |
+| `GET` | `/api/monitors` | List monitors with latest status and findings |
+| `POST` | `/api/monitors` | Register a named OpenAPI URL |
+| `GET` | `/api/monitors/{id}` | Read one monitor |
+| `DELETE` | `/api/monitors/{id}` | Remove a monitor and its history |
+| `POST` | `/api/monitors/{id}/check` | Fetch and compare the current contract |
+| `GET` | `/api/monitors/{id}/snapshots` | Read recent snapshot metadata |
+| `GET` | `/api/monitors/{id}/findings` | Read findings from the latest snapshot |
+
+## Configuration
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `SPECWATCH_DATABASE_PATH` | `./data/specwatch.sqlite3` | SQLite database location |
+| `SPECWATCH_POLL_INTERVAL_SECONDS` | `300` | Background polling interval; set `0` to disable |
+| `SPECWATCH_MAX_SPEC_BYTES` | `2097152` | Maximum downloaded document size |
+| `SPECWATCH_ALLOWED_HOSTS` | unset | Optional comma-separated exact hostname allowlist |
+
+The fetcher uses a bounded timeout, limited retries, conditional requests, and does not follow redirects. The host allowlist is useful when the set of APIs is known in advance. For any public deployment, add authentication, enforce an outbound network policy, and pin DNS resolution at the network boundary.
+
+## Design
+
+```text
+Browser / API client
+        │
+        ▼
+FastAPI routes ─── SpecWatch service ─── bounded HTTPS fetcher ─── OpenAPI source
+                         │
+                         ├── parser and compatibility analyzer
+                         └── SQLite repository (monitors, snapshots, findings)
+```
+
+The data layer uses SQLite directly to keep the project easy to run. Core comparison logic is independent from HTTP and persistence, so it can be tested offline.
+
+## Quality checks
+
+```bash
+ruff check .
+pytest -q
+```
+
+GitHub Actions runs these checks on Python 3.11 and 3.12 for pushes and pull requests.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
+
