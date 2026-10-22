@@ -1,0 +1,14 @@
+services:
+  specwatch:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      SPECWATCH_DATABASE_PATH: /data/specwatch.sqlite3
+      SPECWATCH_POLL_INTERVAL_SECONDS: ${SPECWATCH_POLL_INTERVAL_SECONDS:-300}
+    volumes:
+      - specwatch-data:/data
+    restart: unless-stopped
+
+volumes:
+  specwatch-data:

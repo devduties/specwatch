@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101b2b" />
+    <title>SpecWatch · API contract monitor</title>
+    <style>
+      :root { color-scheme: light; --ink:#172234; --muted:#718096; --line:#e4eaf1; --paper:#f4f7fb; --blue:#1769aa; --teal:#13887d; --red:#ba3b48; --amber:#a96a0b; }
+      * { box-sizing:border-box; }
+      body { margin:0; background:var(--paper); color:var(--ink); font:15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      header { background:#101b2b; color:#fff; padding:22px clamp(18px,5vw,64px); display:flex; align-items:center; justify-content:space-between; gap:24px; }
+      .brand { display:flex; align-items:center; gap:13px; }
+      .mark { width:36px; height:36px; border-radius:11px; background:linear-gradient(145deg,#58c6bd,#1971b7); display:grid; place-items:center; font-weight:800; }
+      h1 { font-size:18px; line-height:1.1; margin:0; letter-spacing:-.02em; }
+      header p { color:#aebdce; margin:4px 0 0; font-size:12px; }
+      header a { color:#c4d7eb; text-decoration:none; font-size:13px; }
+      main { width:min(1120px,calc(100% - 36px)); margin:32px auto 64px; }
+      .intro { display:flex; justify-content:space-between; align-items:end; gap:22px; margin-bottom:22px; }
+      .eyebrow { color:var(--blue); font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.12em; margin:0 0 5px; }
+      h2 { margin:0; font-size:26px; letter-spacing:-.035em; }
+      .intro p:last-child { margin:6px 0 0; color:var(--muted); max-width:610px; }
+      button { font:inherit; cursor:pointer; border:0; border-radius:9px; padding:10px 14px; font-weight:650; }
+      .primary { color:white; background:var(--blue); box-shadow:0 4px 12px #1769aa30; }
+      button:disabled { opacity:.55; cursor:wait; }
+      .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:20px 0; }
+      .card, .panel { background:white; border:1px solid var(--line); border-radius:13px; box-shadow:0 5px 18px #17223408; }
+      .card { padding:16px 18px; }
+      .card span { display:block; color:var(--muted); font-size:12px; }
+      .card strong { display:block; margin-top:4px; font-size:25px; letter-spacing:-.04em; }
+      .panel { overflow:hidden; }
+      .panel-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 18px; border-bottom:1px solid var(--line); }
+      .panel-head h3 { margin:0; font-size:15px; }
+      .panel-head p { margin:3px 0 0; color:var(--muted); font-size:12px; }
+      .search { border:1px solid var(--line); border-radius:8px; padding:8px 10px; font:inherit; width:min(250px,45vw); }
+      .monitor-list { display:grid; }
+      .monitor { padding:16px 18px; border-bottom:1px solid var(--line); }
+      .monitor:last-child { border-bottom:0; }
+      .monitor-top { display:flex; align-items:start; justify-content:space-between; gap:14px; }
+      .monitor-name { font-weight:700; font-size:15px; overflow-wrap:anywhere; }
+      .monitor-url { color:var(--muted); font-size:12px; overflow-wrap:anywhere; margin-top:3px; }
+      .status { display:inline-flex; align-items:center; gap:6px; border-radius:99px; padding:4px 9px; font-size:11px; font-weight:700; white-space:nowrap; }
+      .status::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
+      .healthy { color:#147a5d; background:#e7f6ef; }
+      .pending { color:#64748b; background:#edf1f6; }
+      .breaking,.error { color:#ad303d; background:#fff0f1; }
+      .changed { color:#94600d; background:#fff5df; }
+      .monitor-meta { display:flex; flex-wrap:wrap; gap:14px; color:var(--muted); font-size:11px; margin:11px 0 0; }
+      .findings { margin:12px 0 0; border-left:3px solid #f0b342; padding:8px 11px; background:#fff9eb; border-radius:0 8px 8px 0; }
+      .finding { font-size:12px; margin:3px 0; }
+      .finding.breaking { color:#9d2937; background:none; padding:0; }
+      .actions { display:flex; gap:7px; }
+      .small { background:#eef3f8; color:#34465a; padding:7px 10px; font-size:12px; }
+      .danger { color:#a12d39; background:#fff0f1; }
+      .empty { padding:38px 22px; text-align:center; color:var(--muted); }
+      .empty strong { display:block; color:var(--ink); margin-bottom:5px; }
+      .empty p { margin:0 auto 14px; max-width:450px; font-size:13px; }
+      .notice { min-height:20px; color:var(--muted); font-size:12px; margin:10px 2px; }
+      dialog { width:min(490px,calc(100% - 28px)); padding:0; border:1px solid var(--line); border-radius:14px; box-shadow:0 20px 80px #0b193044; }
+      dialog::backdrop { background:#101b2b88; }
+      .dialog-head,.dialog-body,.dialog-actions { padding:17px 20px; }
+      .dialog-head { border-bottom:1px solid var(--line); }
+      .dialog-head h3 { margin:0; font-size:17px; }
+      .dialog-head p { margin:4px 0 0; color:var(--muted); font-size:12px; }
+      .dialog-body label { display:block; font-size:12px; font-weight:650; margin:0 0 5px; }
+      .dialog-body input { width:100%; border:1px solid #d8e0ea; border-radius:8px; padding:10px; margin:0 0 13px; font:inherit; }
+      .hint { color:var(--muted); font-size:11px; margin:0; }
+      .dialog-actions { border-top:1px solid var(--line); display:flex; justify-content:end; gap:8px; }
+      @media(max-width:760px) { .cards { grid-template-columns:repeat(2,1fr); } .intro { align-items:start; flex-direction:column; } header { padding:16px 18px; } }
+      @media(max-width:480px) { .cards { gap:8px; } .card { padding:13px; } .panel-head { align-items:start; flex-direction:column; } .search { width:100%; } .monitor-top { flex-direction:column; } .actions { width:100%; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand"><div class="mark">S</div><div><h1>SpecWatch</h1><p>API contract change monitor</p></div></div>
+      <a href="/docs">API documentation ↗</a>
+    </header>
+    <main>
+      <section class="intro">
+        <div><p class="eyebrow">Contract observability</p><h2>Catch API changes before they surprise you.</h2><p>Track OpenAPI documents, review contract history, and see compatibility findings with enough context to act.</p></div>
+        <button class="primary" id="add-monitor">＋ Add API spec</button>
+      </section>
+      <section class="cards" aria-label="Monitoring summary">
+        <div class="card"><span>Monitored APIs</span><strong id="metric-monitors">—</strong></div>
+        <div class="card"><span>Snapshots stored</span><strong id="metric-snapshots">—</strong></div>
+        <div class="card"><span>Breaking findings</span><strong id="metric-breaking">—</strong></div>
+        <div class="card"><span>Current fetch errors</span><strong id="metric-errors">—</strong></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><div><h3>Your monitored specifications</h3><p>Latest checks and compatibility findings</p></div><input id="search" class="search" type="search" placeholder="Filter by API name" aria-label="Filter monitored APIs"></div>
+        <div id="monitor-list" class="monitor-list"><div class="empty">Loading monitors…</div></div>
+      </section>
+      <p id="notice" class="notice" role="status"></p>
+    </main>
+    <dialog id="monitor-dialog">
+      <form id="monitor-form">
+        <div class="dialog-head"><h3>Add an API spec</h3><p>SpecWatch currently accepts public HTTPS OpenAPI 3.x documents.</p></div>
+        <div class="dialog-body">
+          <label for="name">Display name</label><input id="name" name="name" maxlength="100" required placeholder="Payments API">
+          <label for="spec-url">OpenAPI document URL</label><input id="spec-url" name="spec_url" type="url" maxlength="2048" required placeholder="https://api.example.com/openapi.json">
+          <p class="hint">Use a public JSON or YAML document. Credentials in URLs, local addresses, redirects, and non-HTTPS URLs are rejected.</p>
+        </div>
+        <div class="dialog-actions"><button type="button" class="small" id="cancel-dialog">Cancel</button><button class="primary" type="submit">Add monitor</button></div>
+      </form>
+    </dialog>
+    <script>
+      const list = document.querySelector('#monitor-list');
+      const notice = document.querySelector('#notice');
+      const dialog = document.querySelector('#monitor-dialog');
+      let monitors = [];
+      const text = (tag, value, className) => { const element = document.createElement(tag); element.textContent = value ?? ''; if (className) element.className = className; return element; };
+      const date = (value) => value ? new Date(value).toLocaleString() : 'Not checked yet';
+      async function api(path, options = {}) {
+        const response = await fetch(path, {headers:{'Content-Type':'application/json'}, ...options});
+        if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail || `Request failed (${response.status})`); }
+        return response.status === 204 ? null : response.json();
+      }
+      function renderFindings(items) {
+        if (!items?.length) return null;
+        const box = text('div', '', 'findings');
+        for (const item of items.slice(0, 4)) {
+          const row = text('p', `${item.severity.toUpperCase()} · ${item.path} — ${item.message}`, `finding ${item.severity}`);
+          box.append(row);
+        }
+        if (items.length > 4) box.append(text('p', `+ ${items.length - 4} more findings`, 'finding'));
+        return box;
+      }
+      function render() {
+        const query = document.querySelector('#search').value.trim().toLowerCase();
+        const filtered = monitors.filter(m => m.name.toLowerCase().includes(query));
+        list.replaceChildren();
+        if (!filtered.length) {
+          const empty = text('div', '', 'empty');
+          empty.append(text('strong', monitors.length ? 'No APIs match that filter.' : 'No API specs are being monitored yet.'));
+          empty.append(text('p', monitors.length ? 'Try another name.' : 'Add a public OpenAPI document to start tracking snapshots and compatibility changes.'));
+          list.append(empty); return;
+        }
+        for (const monitor of filtered) {
+          const row = text('article', '', 'monitor');
+          const top = text('div', '', 'monitor-top');
+          const info = text('div', '');
+          info.append(text('div', monitor.latest_snapshot?.title || monitor.name, 'monitor-name'));
+          info.append(text('div', monitor.spec_url, 'monitor-url'));
+          const side = text('div', '');
+          side.append(text('span', monitor.status, `status ${monitor.status}`));
+          top.append(info, side); row.append(top);
+          const meta = text('div', '', 'monitor-meta');
+          meta.append(text('span', `Version: ${monitor.latest_snapshot?.version || '—'}`));
+          meta.append(text('span', `Last check: ${date(monitor.last_checked_at)}`));
+          meta.append(text('span', `Last success: ${date(monitor.last_success_at)}`));
+          row.append(meta);
+          if (monitor.last_error) row.append(text('p', monitor.last_error, 'finding breaking'));
+          const findings = renderFindings(monitor.findings); if (findings) row.append(findings);
+          const actions = text('div', '', 'actions');
+          const check = text('button', 'Check now', 'small');
+          check.addEventListener('click', async () => { check.disabled=true; notice.textContent=`Checking ${monitor.name}…`; try { const result=await api(`/api/monitors/${monitor.id}/check`,{method:'POST'}); notice.textContent=result.unchanged?'No contract change detected.':'Specification snapshot saved.'; await reload(); } catch(error) { notice.textContent=error.message; await reload(); } finally { check.disabled=false; } });
+          const remove = text('button', 'Remove', 'small danger');
+          remove.addEventListener('click', async () => { if (!confirm(`Remove ${monitor.name} and its stored history?`)) return; try { await api(`/api/monitors/${monitor.id}`,{method:'DELETE'}); notice.textContent='Monitor and history removed.'; await reload(); } catch(error) { notice.textContent=error.message; } });
+          actions.append(check, remove); row.append(actions); list.append(row);
+        }
+      }
+      async function reload() {
+        try {
+          const [next, overview] = await Promise.all([api('/api/monitors'), api('/api/overview')]);
+          monitors = next;
+          document.querySelector('#metric-monitors').textContent=overview.monitors;
+          document.querySelector('#metric-snapshots').textContent=overview.snapshots;
+          document.querySelector('#metric-breaking').textContent=overview.breaking_changes;
+          document.querySelector('#metric-errors').textContent=overview.monitors_with_errors;
+          render();
+        } catch(error) { notice.textContent=error.message; list.replaceChildren(text('div','Could not load monitor data. Check the server and refresh.','empty')); }
+      }
+      document.querySelector('#add-monitor').addEventListener('click',()=>dialog.showModal());
+      document.querySelector('#cancel-dialog').addEventListener('click',()=>dialog.close());
+      document.querySelector('#search').addEventListener('input',render);
+      document.querySelector('#monitor-form').addEventListener('submit',async(event)=>{
+        event.preventDefault(); const form=event.currentTarget; const submit=form.querySelector('[type="submit"]'); submit.disabled=true;
+        try { await api('/api/monitors',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(form)))}); form.reset(); dialog.close(); notice.textContent='Monitor added. Run a check to capture its first snapshot.'; await reload(); }
+        catch(error) { notice.textContent=error.message; }
+        finally { submit.disabled=false; }
+      });
+      reload();
+    </script>
+  </body>
+</html>

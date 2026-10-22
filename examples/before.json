@@ -1,0 +1,32 @@
+{
+  "openapi": "3.1.0",
+  "info": {"title": "Sample Orders API", "version": "1.4.0"},
+  "paths": {
+    "/v1/orders/{order_id}": {
+      "parameters": [
+        {"name": "order_id", "in": "path", "required": true, "schema": {"type": "string"}}
+      ],
+      "get": {
+        "operationId": "getOrder",
+        "responses": {
+          "200": {
+            "description": "Order found",
+            "content": {"application/json": {"schema": {
+              "type": "object",
+              "properties": {
+                "id": {"type": "string"},
+                "status": {"type": "string", "enum": ["pending", "paid", "shipped"]},
+                "createdAt": {"type": "string", "format": "date-time"}
+              }
+            }}}
+          },
+          "404": {"description": "Order not found"}
+        }
+      },
+      "delete": {
+        "operationId": "cancelOrder",
+        "responses": {"204": {"description": "Order cancelled"}}
+      }
+    }
+  }
+}
