@@ -27,7 +27,7 @@ python -m pip install -e '.[dev]'
 uvicorn specwatch.main:app --app-dir src --reload
 ```
 
-Open `http://127.0.0.1:8000` for the dashboard and `http://127.0.0.1:8000/docs` for the API reference. The application creates `./data/specwatch.sqlite3` on first start. Use `SPECWATCH_DATABASE_PATH` to choose a different location.
+Open `http://127.0.0.1:8000` for the dashboard and `http://127.0.0.1:8000/docs` for the API reference. Set `SPECWATCH_API_KEY` to require an `Authorization: Bearer <key>` header on all `/api/` routes; leave it unset for local development without authentication. The application creates `./data/specwatch.sqlite3` on first start. Use `SPECWATCH_DATABASE_PATH` to choose a different location.
 
 ### Docker
 
@@ -35,7 +35,7 @@ Open `http://127.0.0.1:8000` for the dashboard and `http://127.0.0.1:8000/docs` 
 docker compose up --build
 ```
 
-The compose file binds the app to localhost and persists its database in a named volume. The application has no authentication and is designed for local development; do not expose it publicly without adding authentication and network egress controls.
+The compose file binds the app to localhost and persists its database in a named volume. When `SPECWATCH_API_KEY` is set, API clients must send it as a Bearer token. The dashboard itself remains unauthenticated, so keep the service on a trusted network and apply network egress controls before any public deployment.
 
 ## Offline compatibility demo
 
@@ -77,6 +77,7 @@ The create call registers a monitor. The first check establishes its baseline; l
 | `SPECWATCH_POLL_INTERVAL_SECONDS` | `300` | Background polling interval; set `0` to disable |
 | `SPECWATCH_MAX_SPEC_BYTES` | `2097152` | Maximum downloaded document size |
 | `SPECWATCH_ALLOWED_HOSTS` | unset | Optional comma-separated exact hostname allowlist |
+| `SPECWATCH_API_KEY` | unset | Optional Bearer token required on all `/api/` routes |
 
 The fetcher uses a bounded timeout, limited retries, conditional requests, and does not follow redirects. The host allowlist is useful when the set of APIs is known in advance. For any public deployment, add authentication, enforce an outbound network policy, and pin DNS resolution at the network boundary.
 
@@ -106,4 +107,3 @@ GitHub Actions runs these checks on Python 3.11 and 3.12 for pushes and pull req
 ## License
 
 MIT. See [LICENSE](LICENSE).
-

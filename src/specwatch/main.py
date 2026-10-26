@@ -7,10 +7,11 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from specwatch.auth import require_api_key
 from specwatch.config import Settings
 from specwatch.errors import InvalidSpecDocument, InvalidSpecURL, SpecFetchError
 from specwatch.fetcher import SpecFetcher
@@ -71,38 +72,40 @@ def create_app(
     def dashboard() -> FileResponse:
         return FileResponse(Path(__file__).parent / "static" / "index.html")
 
-    @app.get("/api/health", tags=["system"])
+    router = APIRouter(prefix="/api")
+
+    @router.get("/health", tags=["system"])
     def health() -> dict[str, str]:
         return {"status": "ok", "service": "specwatch"}
 
-    @app.get("/api/overview", tags=["monitors"])
+    @router.get("/overview", tags=["monitors"])
     def overview(request: Request) -> dict[str, Any]:
         return request.app.state.service.store.overview()
 
-    @app.get("/api/monitors", tags=["monitors"])
+    @router.get("/monitors", tags=["monitors"])
     def list_monitors(request: Request) -> list[dict[str, Any]]:
         return request.app.state.service.store.list_monitors()
 
-    @app.post("/api/monitors", status_code=201, tags=["monitors"])
+    @router.post("/monitors", status_code=201, tags=["monitors"])
     def create_monitor(payload: MonitorCreate, request: Request) -> dict[str, Any]:
         try:
             return request.app.state.service.create_monitor(payload.name, payload.spec_url)
         except InvalidSpecURL as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    @app.get("/api/monitors/{monitor_id}", tags=["monitors"])
+    @router.get("/monitors/{monitor_id}", tags=["monitors"])
     def get_monitor(monitor_id: str, request: Request) -> dict[str, Any]:
         result = request.app.state.service.store.get_monitor(monitor_id)
         if not result:
             raise HTTPException(status_code=404, detail="Monitor not found.")
         return result
 
-    @app.delete("/api/monitors/{monitor_id}", status_code=204, tags=["monitors"])
+    @router.delete("/monitors/{monitor_id}", status_code=204, tags=["monitors"])
     def delete_monitor(monitor_id: str, request: Request) -> None:
         if not request.app.state.service.store.delete_monitor(monitor_id):
             raise HTTPException(status_code=404, detail="Monitor not found.")
 
-    @app.post("/api/monitors/{monitor_id}/check", tags=["checks"])
+    @router.post("/monitors/{monitor_id}/check", tags=["checks"])
     async def check_monitor(monitor_id: str, request: Request) -> dict[str, Any]:
         try:
             return await request.app.state.service.check_monitor(monitor_id)
@@ -111,7 +114,7 @@ def create_app(
         except (InvalidSpecURL, InvalidSpecDocument, SpecFetchError) as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    @app.get("/api/monitors/{monitor_id}/snapshots", tags=["checks"])
+    @router.get("/monitors/{monitor_id}/snapshots", tags=["checks"])
     def list_snapshots(monitor_id: str, request: Request, limit: int = 30) -> list[dict[str, Any]]:
         if not request.app.state.service.store.get_monitor_record(monitor_id):
             raise HTTPException(status_code=404, detail="Monitor not found.")
@@ -119,13 +122,14 @@ def create_app(
             raise HTTPException(status_code=422, detail="Limit must be between 1 and 100.")
         return request.app.state.service.store.list_snapshots(monitor_id, limit)
 
-    @app.get("/api/monitors/{monitor_id}/findings", tags=["checks"])
+    @router.get("/monitors/{monitor_id}/findings", tags=["checks"])
     def latest_findings(monitor_id: str, request: Request) -> list[dict[str, Any]]:
         if not request.app.state.service.store.get_monitor_record(monitor_id):
             raise HTTPException(status_code=404, detail="Monitor not found.")
         latest = request.app.state.service.store.latest_snapshot(monitor_id)
         return latest["findings"] if latest else []
 
+    app.include_router(router, dependencies=[Depends(require_api_key(settings.api_key))])
     return app
 
 

@@ -13,6 +13,7 @@ class Settings:
     poll_interval_seconds: int
     max_spec_bytes: int
     allowed_hosts: frozenset[str]
+    api_key: str | None = None
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -28,4 +29,5 @@ class Settings:
             raise ValueError("SPECWATCH_POLL_INTERVAL_SECONDS must be zero or greater")
         if max_bytes < 1024:
             raise ValueError("SPECWATCH_MAX_SPEC_BYTES must be at least 1024")
-        return cls(database_path, poll_interval, max_bytes, hosts)
+        api_key = os.getenv("SPECWATCH_API_KEY") or None
+        return cls(database_path, poll_interval, max_bytes, hosts, api_key)
