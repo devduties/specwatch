@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from specwatch.alerts import AlertSender
 from specwatch.auth import require_api_key
 from specwatch.config import Settings
 from specwatch.errors import InvalidSpecDocument, InvalidSpecURL, SpecFetchError
@@ -38,6 +39,7 @@ def create_app(
     *,
     store: Store | None = None,
     fetcher_factory: Any = SpecFetcher,
+    alert_sender_factory: Any = AlertSender,
 ) -> FastAPI:
     settings = settings or Settings.from_env()
     store = store or Store(settings.database_path)
@@ -45,8 +47,10 @@ def create_app(
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         store.initialize()
-        async with fetcher_factory(settings) as fetcher:
-            service = SpecService(store, fetcher)
+        async with fetcher_factory(settings) as fetcher, alert_sender_factory(
+            settings
+        ) as alert_sender:
+            service = SpecService(store, fetcher, alert_sender)
             application.state.service = service
             poller = None
             if settings.poll_interval_seconds > 0:

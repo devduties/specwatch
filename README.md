@@ -9,6 +9,7 @@
 - Detects common breaking changes: removed operations or response codes, newly required parameters or request fields, removed request fields, changed schema types, and removed enum values.
 - Reports response-field removals as breaking because clients can rely on fields present in the documented contract.
 - Polls monitored documents in the background and supports manual checks.
+- Can send newly detected breaking changes to a configured HookRelay endpoint.
 - Serves an accessible, responsive dashboard and a documented REST API at `/docs`.
 - Rejects non-HTTPS URLs, credentials, redirects, non-public IPs, and oversized documents. An optional host allowlist can further restrict monitored sources.
 
@@ -78,8 +79,12 @@ The create call registers a monitor. The first check establishes its baseline; l
 | `SPECWATCH_MAX_SPEC_BYTES` | `2097152` | Maximum downloaded document size |
 | `SPECWATCH_ALLOWED_HOSTS` | unset | Optional comma-separated exact hostname allowlist |
 | `SPECWATCH_API_KEY` | unset | Optional Bearer token required on all `/api/` routes |
+| `SPECWATCH_ALERT_URL` | unset | Optional HookRelay event-ingestion URL for breaking-change notifications |
+| `SPECWATCH_ALERT_API_KEY` | unset | Optional Bearer token for the alert destination |
 
 The fetcher uses a bounded timeout, limited retries, conditional requests, and does not follow redirects. The host allowlist is useful when the set of APIs is known in advance. For any public deployment, add authentication, enforce an outbound network policy, and pin DNS resolution at the network boundary.
+
+When `SPECWATCH_ALERT_URL` is set, each new snapshot with breaking findings triggers a POST to that URL. For HookRelay, use the endpoint's event-ingestion URL, such as `http://127.0.0.1:8000/v1/endpoints/ENDPOINT_ID/events`. The payload contains the monitor, snapshot, and breaking findings. Set `SPECWATCH_ALERT_API_KEY` if HookRelay requires a Bearer key. Alert delivery is best effort: a failed POST is logged, and the saved snapshot remains available.
 
 ## Design
 

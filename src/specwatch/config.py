@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,6 +15,8 @@ class Settings:
     max_spec_bytes: int
     allowed_hosts: frozenset[str]
     api_key: str | None = None
+    alert_url: str | None = None
+    alert_api_key: str | None = field(default=None, repr=False)
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -30,4 +33,24 @@ class Settings:
         if max_bytes < 1024:
             raise ValueError("SPECWATCH_MAX_SPEC_BYTES must be at least 1024")
         api_key = os.getenv("SPECWATCH_API_KEY") or None
-        return cls(database_path, poll_interval, max_bytes, hosts, api_key)
+        alert_url = os.getenv("SPECWATCH_ALERT_URL", "").strip() or None
+        if alert_url:
+            try:
+                parsed_alert_url = urlsplit(alert_url)
+                _ = parsed_alert_url.port
+            except ValueError as exc:
+                raise ValueError("SPECWATCH_ALERT_URL must be a valid HTTP(S) URL.") from exc
+            if (
+                parsed_alert_url.scheme.lower() not in {"http", "https"}
+                or not parsed_alert_url.hostname
+                or parsed_alert_url.username
+                or parsed_alert_url.password
+                or parsed_alert_url.fragment
+            ):
+                raise ValueError(
+                    "SPECWATCH_ALERT_URL must be an HTTP(S) URL without credentials or a fragment."
+                )
+        alert_api_key = os.getenv("SPECWATCH_ALERT_API_KEY") or None
+        return cls(
+            database_path, poll_interval, max_bytes, hosts, api_key, alert_url, alert_api_key
+        )
