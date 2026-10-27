@@ -1,0 +1,45 @@
+name: SpecWatch
+description: Detect breaking changes between two OpenAPI specs.
+
+inputs:
+  before:
+    description: Path or URL of the previous OpenAPI spec.
+    required: true
+  after:
+    description: Path or URL of the current OpenAPI spec.
+    required: true
+
+outputs:
+  findings:
+    description: JSON array of compatibility findings.
+    value: ${{ steps.run.outputs.findings }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install SpecWatch
+      shell: bash
+      run: pip install git+https://github.com/devduties/specwatch.git
+
+    - name: Run comparison
+      id: run
+      shell: bash
+      env:
+        SPECWATCH_BEFORE: ${{ inputs.before }}
+        SPECWATCH_AFTER: ${{ inputs.after }}
+      run: |
+        set +e
+        output=$(python -m specwatch "$SPECWATCH_BEFORE" "$SPECWATCH_AFTER")
+        exit_code=$?
+        delimiter="$(python -c 'import uuid; print(uuid.uuid4().hex)')"
+        {
+          echo "findings<<$delimiter"
+          printf '%s\n' "$output"
+          echo "$delimiter"
+        } >> "$GITHUB_OUTPUT"
+        exit "$exit_code"

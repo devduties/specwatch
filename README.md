@@ -71,6 +71,21 @@ The create call registers a monitor. The first check establishes its baseline; l
 | `GET` | `/api/monitors/{id}/diff` | Return a unified diff between the two latest snapshots |
 | `GET` | `/api/monitors/{id}/findings` | Read findings from the latest snapshot |
 
+## GitHub Action
+
+Compare two OpenAPI files in a workflow. The action exits with code `1` when it finds a breaking change, which fails the workflow step; otherwise it exits with code `0`. Its `findings` output contains the JSON array of compatibility findings.
+
+```yaml
+- uses: actions/checkout@v4
+- uses: devduties/specwatch@main
+  id: specwatch
+  with:
+    before: specs/openapi-v1.json
+    after: specs/openapi-v2.json
+```
+
+Use `steps.specwatch.outputs.findings` in a later workflow step when you need the findings JSON.
+
 ## Configuration
 
 | Variable | Default | Description |
