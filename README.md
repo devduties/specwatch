@@ -1,6 +1,6 @@
 # SpecWatch
 
-**SpecWatch watches your OpenAPI specs over time and tells you when a change could break existing clients.** Add a public HTTPS specification, capture snapshots over time, and review compatibility findings in a small dashboard or through the HTTP API.
+SpecWatch watches your OpenAPI specs over time and tells you when a change could break existing clients.** Add a public HTTPS specification, capture snapshots over time, and review compatibility findings in a small dashboard or through the HTTP API.
 
 ## What it does
 
