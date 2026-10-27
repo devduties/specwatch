@@ -1,6 +1,6 @@
 # SpecWatch
 
-**SpecWatch watches your OpenAPI specs over time and tells you when a change could break existing clients.** Point it at an API spec, and it tells you when something changed that could break your clients.
+**SpecWatch watches your OpenAPI specs over time and tells you when a change could break existing clients.**
 
 ## What it does
 
