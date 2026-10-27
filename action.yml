@@ -3,10 +3,10 @@ description: Detect breaking changes between two OpenAPI specs.
 
 inputs:
   before:
-    description: Path or URL of the previous OpenAPI spec.
+    description: Path to the previous OpenAPI spec file (JSON or YAML).
     required: true
   after:
-    description: Path or URL of the current OpenAPI spec.
+    description: Path to the current OpenAPI spec file (JSON or YAML).
     required: true
 
 outputs:
