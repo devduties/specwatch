@@ -1,6 +1,6 @@
 # SpecWatch
 
-SpecWatch watches your OpenAPI specs over time and tells you when a change could break existing clients. Add a public HTTPS specification, capture snapshots over time, and review compatibility findings in a small dashboard or through the HTTP API.
+**SpecWatch watches your OpenAPI specs over time and tells you when a change could break existing clients.** Point it at an API spec, and it tells you when something changed that could break your clients.
 
 ## What it does
 
@@ -101,7 +101,7 @@ Use `steps.specwatch.outputs.findings` in a later workflow step when you need th
 
 The fetcher has a bounded timeout, retries transient errors up to twice, uses conditional requests to avoid re-downloading unchanged specs, and never follows redirects. The hostname allowlist is useful when you know the full set of APIs upfront. Before any public deployment, set an API key, restrict outbound network access, and put the service behind a reverse proxy.
 
-When `SPECWATCH_ALERT_URL` is set, each new snapshot with breaking findings triggers a POST to that URL. For HookRelay, use the endpoint's event-ingestion URL, such as `http://127.0.0.1:8000/v1/endpoints/ENDPOINT_ID/events`. The payload contains the monitor, snapshot, and breaking findings. Set `SPECWATCH_ALERT_API_KEY` if HookRelay requires a Bearer key. Alert delivery is best effort: a failed POST is logged, and the saved snapshot remains available.
+When `SPECWATCH_ALERT_URL` is set, each new snapshot with breaking findings triggers a POST to that URL. For HookRelay, use the endpoint's event-ingestion URL, such as `http://127.0.0.1:8000/v1/endpoints/ENDPOINT_ID/events`. The payload contains the monitor, snapshot, and breaking findings. Set `SPECWATCH_ALERT_API_KEY` if HookRelay requires a Bearer key. If the POST fails, SpecWatch logs the error and keeps the snapshot. The alert not landing doesn't affect the check result.
 
 ## Design
 
