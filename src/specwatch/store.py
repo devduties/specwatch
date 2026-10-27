@@ -115,6 +115,19 @@ class Store:
         payload["findings"] = self.findings_for_snapshot(payload["id"])
         return payload
 
+    def latest_snapshot_pair(self, monitor_id: str) -> list[dict[str, Any]]:
+        """Return the latest two snapshots, oldest first, including their documents."""
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT id, monitor_id, checked_at, document_json FROM snapshots "
+                "WHERE monitor_id = ? ORDER BY id DESC LIMIT 2",
+                (monitor_id,),
+            ).fetchall()
+        snapshots = [dict(row) for row in reversed(rows)]
+        for snapshot in snapshots:
+            snapshot["document"] = json.loads(snapshot.pop("document_json"))
+        return snapshots
+
     def list_snapshots(self, monitor_id: str, limit: int = 30) -> list[dict[str, Any]]:
         with self._connect() as connection:
             rows = connection.execute(

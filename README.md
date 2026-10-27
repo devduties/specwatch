@@ -68,6 +68,7 @@ The create call registers a monitor. The first check establishes its baseline; l
 | `DELETE` | `/api/monitors/{id}` | Remove a monitor and its history |
 | `POST` | `/api/monitors/{id}/check` | Fetch and compare the current contract |
 | `GET` | `/api/monitors/{id}/snapshots` | Read recent snapshot metadata |
+| `GET` | `/api/monitors/{id}/diff` | Return a unified diff between the two latest snapshots |
 | `GET` | `/api/monitors/{id}/findings` | Read findings from the latest snapshot |
 
 ## Configuration

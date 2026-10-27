@@ -132,6 +132,59 @@ def test_http_spec_url_is_rejected_before_registration(tmp_path) -> None:
         )
     assert response.status_code == 422
 
+
+def test_latest_diff_returns_raw_diff_between_last_two_snapshots(tmp_path) -> None:
+    settings = Settings(tmp_path / "diff.sqlite3", 0, 1024 * 1024, frozenset())
+    app = create_app(settings, store=Store(settings.database_path), fetcher_factory=FakeFetcher)
+
+    with TestClient(app) as client:
+        created = client.post(
+            "/api/monitors",
+            json={"name": "Orders API", "spec_url": "https://api.example.com/openapi.json"},
+        )
+        monitor_id = created.json()["id"]
+        client.post(f"/api/monitors/{monitor_id}/check")
+        client.post(f"/api/monitors/{monitor_id}/check")
+
+        snapshots = client.get(f"/api/monitors/{monitor_id}/snapshots").json()
+        response = client.get(f"/api/monitors/{monitor_id}/diff")
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["monitor_id"] == monitor_id
+    assert result["from_snapshot_id"] == snapshots[1]["id"]
+    assert result["to_snapshot_id"] == snapshots[0]["id"]
+    assert f"--- snapshot-{snapshots[1]['id']}" in result["diff"]
+    assert f"+++ snapshot-{snapshots[0]['id']}" in result["diff"]
+    assert '"status": {' in result["diff"]
+    assert '"schema.property_removed"' not in result["diff"]
+
+
+def test_latest_diff_requires_two_snapshots(tmp_path) -> None:
+    settings = Settings(tmp_path / "one-snapshot.sqlite3", 0, 1024 * 1024, frozenset())
+    app = create_app(settings, store=Store(settings.database_path), fetcher_factory=FakeFetcher)
+
+    with TestClient(app) as client:
+        created = client.post(
+            "/api/monitors",
+            json={"name": "Orders API", "spec_url": "https://api.example.com/openapi.json"},
+        )
+        monitor_id = created.json()["id"]
+        client.post(f"/api/monitors/{monitor_id}/check")
+        response = client.get(f"/api/monitors/{monitor_id}/diff")
+
+    assert response.status_code == 409
+
+
+def test_latest_diff_returns_not_found_for_unknown_monitor(tmp_path) -> None:
+    settings = Settings(tmp_path / "missing-monitor.sqlite3", 0, 1024 * 1024, frozenset())
+    app = create_app(settings, store=Store(settings.database_path), fetcher_factory=FakeFetcher)
+
+    with TestClient(app) as client:
+        response = client.get("/api/monitors/missing/diff")
+
+    assert response.status_code == 404
+
 def test_breaking_change_sends_one_hookrelay_event(tmp_path) -> None:
     settings = Settings(
         tmp_path / "alerts.sqlite3",

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from contextlib import asynccontextmanager
+from difflib import unified_diff
 from pathlib import Path
 from typing import Any
 
@@ -125,6 +127,41 @@ def create_app(
         if not 1 <= limit <= 100:
             raise HTTPException(status_code=422, detail="Limit must be between 1 and 100.")
         return request.app.state.service.store.list_snapshots(monitor_id, limit)
+
+    @router.get("/monitors/{monitor_id}/diff", tags=["checks"])
+    def latest_diff(monitor_id: str, request: Request) -> dict[str, Any]:
+        store = request.app.state.service.store
+        if not store.get_monitor_record(monitor_id):
+            raise HTTPException(status_code=404, detail="Monitor not found.")
+
+        snapshots = store.latest_snapshot_pair(monitor_id)
+        if len(snapshots) < 2:
+            raise HTTPException(
+                status_code=409,
+                detail="At least two snapshots are required to compare documents.",
+            )
+
+        previous, latest = snapshots
+        previous_lines = json.dumps(previous["document"], indent=2, sort_keys=True).splitlines(
+            keepends=True
+        )
+        latest_lines = json.dumps(latest["document"], indent=2, sort_keys=True).splitlines(
+            keepends=True
+        )
+        diff = "".join(
+            unified_diff(
+                previous_lines,
+                latest_lines,
+                fromfile=f"snapshot-{previous['id']}",
+                tofile=f"snapshot-{latest['id']}",
+            )
+        )
+        return {
+            "monitor_id": monitor_id,
+            "from_snapshot_id": previous["id"],
+            "to_snapshot_id": latest["id"],
+            "diff": diff,
+        }
 
     @router.get("/monitors/{monitor_id}/findings", tags=["checks"])
     def latest_findings(monitor_id: str, request: Request) -> list[dict[str, Any]]:
