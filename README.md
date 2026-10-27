@@ -1,6 +1,6 @@
 # SpecWatch
 
-**SpecWatch watches OpenAPI documents and explains potentially breaking contract changes.** Add a public HTTPS specification, capture snapshots over time, and review compatibility findings in a small dashboard or through the HTTP API.
+**SpecWatch watches your OpenAPI specs over time and tells you when a change could break existing clients.** Add a public HTTPS specification, capture snapshots over time, and review compatibility findings in a small dashboard or through the HTTP API.
 
 ## What it does
 
@@ -10,10 +10,11 @@
 - Reports response-field removals as breaking because clients can rely on fields present in the documented contract.
 - Polls monitored documents in the background and supports manual checks.
 - Can send newly detected breaking changes to a configured HookRelay endpoint.
-- Serves an accessible, responsive dashboard and a documented REST API at `/docs`.
-- Rejects non-HTTPS URLs, credentials, redirects, non-public IPs, and oversized documents. An optional host allowlist can further restrict monitored sources.
+- Serves a dashboard and a documented REST API at `/docs`.
+- Rejects non-HTTPS URLs, credentials, redirects, non-public IPs, and oversized documents.
+- Accepts an optional hostname allowlist to limit which APIs can be monitored.
 
-SpecWatch intentionally reports an explainable subset of compatibility changes. It is not a formal compatibility proof: external `$ref` documents and some advanced JSON Schema constructs are outside the current analyzer's scope. Review findings alongside your API's versioning and client policies.
+SpecWatch covers the most common breaking changes, not every possible one. External `$ref` documents and some advanced JSON Schema patterns are outside its current scope. Treat findings as a useful signal, not a guarantee.
 
 ## Run locally
 
@@ -98,7 +99,7 @@ Use `steps.specwatch.outputs.findings` in a later workflow step when you need th
 | `SPECWATCH_ALERT_URL` | unset | Optional HookRelay event-ingestion URL for breaking-change notifications |
 | `SPECWATCH_ALERT_API_KEY` | unset | Optional Bearer token for the alert destination |
 
-The fetcher uses a bounded timeout, limited retries, conditional requests, and does not follow redirects. The host allowlist is useful when the set of APIs is known in advance. For any public deployment, add authentication, enforce an outbound network policy, and pin DNS resolution at the network boundary.
+The fetcher has a bounded timeout, retries transient errors up to twice, uses conditional requests to avoid re-downloading unchanged specs, and never follows redirects. The hostname allowlist is useful when you know the full set of APIs upfront. Before any public deployment, set an API key, restrict outbound network access, and put the service behind a reverse proxy.
 
 When `SPECWATCH_ALERT_URL` is set, each new snapshot with breaking findings triggers a POST to that URL. For HookRelay, use the endpoint's event-ingestion URL, such as `http://127.0.0.1:8000/v1/endpoints/ENDPOINT_ID/events`. The payload contains the monitor, snapshot, and breaking findings. Set `SPECWATCH_ALERT_API_KEY` if HookRelay requires a Bearer key. Alert delivery is best effort: a failed POST is logged, and the saved snapshot remains available.
 
@@ -114,7 +115,7 @@ FastAPI routes ─── SpecWatch service ─── bounded HTTPS fetcher ─�
                          └── SQLite repository (monitors, snapshots, findings)
 ```
 
-The data layer uses SQLite directly to keep the project easy to run. Core comparison logic is independent from HTTP and persistence, so it can be tested offline.
+The data layer uses SQLite directly to keep the project easy to run. The comparison logic has no dependency on HTTP or the database, so every breaking-change rule can be tested with plain Python dicts.
 
 ## Quality checks
 
